@@ -5,3 +5,5 @@ vim.keymap.set("i", "jk", "<esc>")
 
 vim.keymap.set("n", "<leader>j", ":w<esc>")
 vim.keymap.set("n", "<leader>k", ":q<esc>")
+
+vim.keymap.set({ "n", "v" }, "<M-enter>", vim.lsp.buf.code_action)
