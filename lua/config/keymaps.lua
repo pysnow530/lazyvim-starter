@@ -3,4 +3,5 @@
 -- Add any additional keymaps here
 vim.keymap.set("i", "jk", "<esc>")
 
+vim.keymap.set("n", "<leader>j", ":w<esc>")
 vim.keymap.set("n", "<leader>k", ":q<esc>")
