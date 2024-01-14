@@ -7,3 +7,7 @@ vim.keymap.set("n", "<leader>j", ":w<esc>")
 vim.keymap.set("n", "<leader>k", ":q<esc>")
 
 vim.keymap.set({ "n", "v" }, "<M-enter>", vim.lsp.buf.code_action)
+
+-- python
+vim.keymap.set("n", "<localleader>r", ":!python3 %<cr>")
+vim.keymap.set("v", "<localleader>r", ":!python3<cr>")
