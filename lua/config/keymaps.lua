@@ -8,6 +8,13 @@ vim.keymap.set("i", "jk", "<esc>")
 vim.keymap.set("n", "<leader>j", ":w<esc>")
 vim.keymap.set("n", "<leader>k", ":q<esc>")
 
+-- system clipboard (for neovide)
+-- ref: https://github.com/neovide/neovide/issues/113
+vim.keymap.set({ "n", "v" }, "<C-c>", '"+y')
+vim.keymap.set("n", "<C-v>", '"+p')
+vim.keymap.set({ "i", "c" }, "<C-v>", "<c-r>+")
+vim.keymap.set("i", "<C-r>", "<c-v>")
+
 -- git version manager
 vim.keymap.set("n", "<leader>v", function()
   Util.terminal({ "lazygit" }, { cwd = Util.root(), esc_esc = false, ctrl_hjkl = false })
