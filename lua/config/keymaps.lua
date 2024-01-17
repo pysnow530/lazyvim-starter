@@ -30,11 +30,14 @@ local function parse_toml_table(lines)
 
   for _, line in ipairs(lines) do
     local k1, v1 = string.match(line, '([%w_]+)%s*=%s*"(.*)"')
-    local k2, v2 = string.match(line, "([%w_]+)%s*=%s*(.*)")
+    local k2, v2 = string.match(line, "([%w_]+)%s*=%s*'(.*)'")
+    local k3, v3 = string.match(line, "([%w_]+)%s*=%s*(.*)")
     if k1 and v1 then
       tb[k1] = v1
     elseif k2 and v2 then
       tb[k2] = v2
+    elseif k3 and v3 then
+      tb[k3] = v3
     end
   end
 
@@ -67,7 +70,7 @@ vim.keymap.set("v", "<leader>|", function()
         .. tb.passwd
         .. "' "
         .. (tb.db and tb.db or tb.db_name)
-        .. " -A"
+        .. " -Nse 'select 1'"
     )
     vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
   end
