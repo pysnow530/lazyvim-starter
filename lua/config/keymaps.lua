@@ -5,8 +5,9 @@ local Util = require("lazyvim.util")
 
 vim.keymap.set("i", "jk", "<esc>")
 
-vim.keymap.set("n", "<leader>j", ":w<esc>")
-vim.keymap.set("n", "<leader>k", ":q<esc>")
+vim.keymap.set("n", "<leader>j", ":w<cr>")
+vim.keymap.set("n", "<leader>k", ":q<cr>")
+vim.keymap.set("n", "<leader>b", ":b#<cr>")
 
 -- system clipboard (for neovide)
 -- ref: https://github.com/neovide/neovide/issues/113
