@@ -18,6 +18,7 @@ require("lazy").setup({
     -- { import = "lazyvim.plugins.extras.lang.python-semshi" },
     -- { import = "lazyvim.plugins.extras.lang.yaml" },
     { import = "lazyvim.plugins.extras.lang.terraform" },
+    { import = "lazyvim.plugins.extras.lang.omnisharp" },
     -- import/override with your plugins
     { import = "plugins" },
   },
