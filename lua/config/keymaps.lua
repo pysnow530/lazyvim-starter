@@ -56,7 +56,6 @@ vim.keymap.set("v", "<leader>|", function()
 
   -- 尝试解析为数据库连接
   local tb = parse_toml_table(lines)
-  print(tb.db_name)
   if tb.host and tb.port and tb.user and tb.passwd and (tb.db or tb.db_name) then
     table.insert(
       lines,
