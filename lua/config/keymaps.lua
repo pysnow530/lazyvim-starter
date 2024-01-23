@@ -52,6 +52,23 @@ local function parse_toml_table(lines)
   return tb
 end
 
+local function parse_ticket_review(lines)
+  local tb = {}
+
+  for _, line in ipairs(lines) do
+    local ticket_id = string.match(line, "%s*https://andon.woa.com/ticket/detail/%?id=(%d+)&sign=.*")
+    if ticket_id then
+      tb.ticket_id = ticket_id
+    elseif string.find(line, "不合理原因") or string.find(line, "待办") then
+      tb.remark = line
+    else
+      tb.tag_topic = line
+    end
+  end
+
+  return tb
+end
+
 -- 尝试文本转换
 vim.keymap.set("v", "<leader>|", function()
   -- 获取选择范围及文本
@@ -64,6 +81,7 @@ vim.keymap.set("v", "<leader>|", function()
 
   -- 尝试解析为数据库连接
   local tb = parse_toml_table(lines)
+
   if tb.host and tb.port and tb.user and tb.passwd and (tb.db or tb.db_name) then
     table.insert(
       lines,
@@ -80,5 +98,33 @@ vim.keymap.set("v", "<leader>|", function()
         .. " -Nse 'select 1'"
     )
     vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+    return
   end
+
+  -- 尝试解析为工单复盘sql
+  local ticket_review = parse_ticket_review(lines)
+
+  if ticket_review.ticket_id and (ticket_review.tag_topic or ticket_review.remark) then
+    local set_fields = {}
+    if ticket_review.tag_topic then
+      table.insert(set_fields, 'tag_topic = "' .. ticket_review.tag_topic .. '"')
+    end
+    if ticket_review.remark then
+      table.insert(set_fields, 'remark = "' .. ticket_review.remark .. '"')
+      if string.find(ticket_review.remark, "不合理原因") then
+        table.insert(set_fields, "unreasonable = 1")
+      end
+    end
+    local sql = "UPDATE ticket_review SET "
+      .. table.concat(set_fields, ", ")
+      .. " WHERE ticket_id = "
+      .. ticket_review.ticket_id
+      .. ";"
+    table.insert(lines, sql)
+    vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+    return
+  end
+
+  table.insert(lines, "Not recognized!" .. ticket_review.ticket_id)
+  vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
 end)
