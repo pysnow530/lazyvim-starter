@@ -23,9 +23,9 @@ end)
 vim.keymap.set("n", "<localleader>r", ":!python3 %<cr>")
 vim.keymap.set("v", "<localleader>r", ":!python3<cr>")
 
--- 解析配置格式的字典（支持toml和python字典）
+-- 解析配置格式的字典（支持toml、json、python字典）
 -- host = "host1"\nport = 8888 转换为 { host = "host1", port = "8888"}
-local function parse_toml_table(lines)
+local function parse_config_table(lines)
   local tb = {}
 
   for _, line in ipairs(lines) do
@@ -36,6 +36,11 @@ local function parse_toml_table(lines)
     -- python
     local k4, v4 = string.match(line, "%s*'([%w_]+)'%s*:%s*'(.*)',")
     local k5, v5 = string.match(line, "%s*'([%w_]+)'%s*:%s*(.*),")
+    -- json
+    local k6, v6 = string.match(line, '%s*"([%w_]+)"%s*:%s*"(.*)",')
+    local k7, v7 = string.match(line, '%s*"([%w_]+)"%s*:%s*(.*),')
+    local k8, v8 = string.match(line, '%s*"([%w_]+)"%s*:%s*"(.*)"')
+    local k9, v9 = string.match(line, '%s*"([%w_]+)"%s*:%s*(.*)')
     if k1 and v1 then
       tb[k1] = v1
     elseif k2 and v2 then
@@ -46,6 +51,14 @@ local function parse_toml_table(lines)
       tb[k4] = v4
     elseif k5 and v5 then
       tb[k5] = v5
+    elseif k6 and v6 then
+      tb[k6] = v6
+    elseif k7 and v7 then
+      tb[k7] = v7
+    elseif k8 and v8 then
+      tb[k8] = v8
+    elseif k9 and v9 then
+      tb[k9] = v9
     end
   end
 
@@ -80,9 +93,9 @@ vim.keymap.set("v", "<leader>|", function()
   local lines = vim.api.nvim_buf_get_lines(0, l1 - 1, l2, true)
 
   -- 尝试解析为数据库连接
-  local tb = parse_toml_table(lines)
+  local tb = parse_config_table(lines)
 
-  if tb.host and tb.port and tb.user and tb.passwd and (tb.db or tb.db_name) then
+  if tb.host and tb.port and tb.user and (tb.passwd or tb.password) and (tb.db or tb.db_name) then
     table.insert(
       lines,
       "mysql -h"
@@ -92,7 +105,7 @@ vim.keymap.set("v", "<leader>|", function()
         .. " -u"
         .. tb.user
         .. " -p'"
-        .. tb.passwd
+        .. (tb.passwd or tb.password)
         .. "' "
         .. (tb.db and tb.db or tb.db_name)
         .. " -Nse 'select 1'"
@@ -125,6 +138,6 @@ vim.keymap.set("v", "<leader>|", function()
     return
   end
 
-  table.insert(lines, "Not recognized!" .. ticket_review.ticket_id)
+  table.insert(lines, "Not recognized!")
   vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
 end)
