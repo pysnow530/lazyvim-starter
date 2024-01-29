@@ -141,3 +141,26 @@ vim.keymap.set("v", "<leader>|", function()
   table.insert(lines, "Not recognized!")
   vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
 end)
+
+function ticketrules(fromdate, todate)
+  local curl = require("plenary/curl")
+  local res = curl.get(
+    "http://vsops.woa.com/api/ticket/rules/",
+    { headers = { ["SECURITY-CODE"] = "32be9b5d5dfb313f843293e0cf5afd44" } }
+  )
+  -- 数据结构参考：https://vsops.woa.com/api/ticket/rules/
+  local rules = vim.json.decode(res.body).data
+  for _, v in ipairs(rules) do
+    local createdate = string.sub(v.created_time, 0, 10)
+    local updatedate = string.sub(v.updated_time, 0, 10)
+    if createdate >= fromdate and createdate <= todate then
+      print(
+        table.concat({ "规则新建", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner }, " | ")
+      )
+    elseif updatedate >= fromdate and updatedate <= todate then
+      print(
+        table.concat({ "规则优化", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner }, " | ")
+      )
+    end
+  end
+end
