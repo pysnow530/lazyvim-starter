@@ -82,6 +82,65 @@ local function parse_ticket_review(lines)
   return tb
 end
 
+-- 尝试解析为数据库连接命令
+local function try_parse_mysql(lines)
+  local tb = parse_config_table(lines)
+
+  if not tb.host or not tb.port or not tb.user then
+    return nil
+  end
+
+  if not tb.passwd and not tb.password then
+    return nil
+  end
+
+  if not tb.db and not tb.db_name then
+    return nil
+  end
+
+  return "mysql -h"
+    .. tb.host
+    .. " -P"
+    .. tb.port
+    .. " -u"
+    .. tb.user
+    .. " -p'"
+    .. (tb.passwd or tb.password)
+    .. "' "
+    .. (tb.db and tb.db or tb.db_name)
+    .. " -Nse 'select 1'"
+end
+
+-- 尝试解析为工单复盘信息写入sql
+local function try_parse_ticket_review(lines)
+  local ticket_review = parse_ticket_review(lines)
+
+  if not ticket_review.ticket_id then
+    return nil
+  end
+
+  if not ticket_review.tag_topic and not ticket_review.remark then
+    return nil
+  end
+
+  local set_fields = {}
+  if ticket_review.tag_topic then
+    table.insert(set_fields, 'tag_topic = "' .. ticket_review.tag_topic .. '"')
+  end
+  if ticket_review.remark then
+    table.insert(set_fields, 'remark = "' .. ticket_review.remark .. '"')
+    if string.find(ticket_review.remark, "不合理原因") then
+      table.insert(set_fields, "unreasonable = 1")
+    end
+  end
+  local sql = "UPDATE ticket_review SET "
+    .. table.concat(set_fields, ", ")
+    .. " WHERE ticket_id = "
+    .. ticket_review.ticket_id
+    .. ";"
+  return sql
+end
+
 -- 尝试文本转换
 vim.keymap.set("v", "<leader>|", function()
   -- 获取选择范围及文本
@@ -93,46 +152,16 @@ vim.keymap.set("v", "<leader>|", function()
   local lines = vim.api.nvim_buf_get_lines(0, l1 - 1, l2, true)
 
   -- 尝试解析为数据库连接
-  local tb = parse_config_table(lines)
-
-  if tb.host and tb.port and tb.user and (tb.passwd or tb.password) and (tb.db or tb.db_name) then
-    table.insert(
-      lines,
-      "mysql -h"
-        .. tb.host
-        .. " -P"
-        .. tb.port
-        .. " -u"
-        .. tb.user
-        .. " -p'"
-        .. (tb.passwd or tb.password)
-        .. "' "
-        .. (tb.db and tb.db or tb.db_name)
-        .. " -Nse 'select 1'"
-    )
+  local res = try_parse_mysql(lines)
+  if res then
+    table.insert(lines, res)
     vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
     return
   end
 
-  -- 尝试解析为工单复盘sql
-  local ticket_review = parse_ticket_review(lines)
-
-  if ticket_review.ticket_id and (ticket_review.tag_topic or ticket_review.remark) then
-    local set_fields = {}
-    if ticket_review.tag_topic then
-      table.insert(set_fields, 'tag_topic = "' .. ticket_review.tag_topic .. '"')
-    end
-    if ticket_review.remark then
-      table.insert(set_fields, 'remark = "' .. ticket_review.remark .. '"')
-      if string.find(ticket_review.remark, "不合理原因") then
-        table.insert(set_fields, "unreasonable = 1")
-      end
-    end
-    local sql = "UPDATE ticket_review SET "
-      .. table.concat(set_fields, ", ")
-      .. " WHERE ticket_id = "
-      .. ticket_review.ticket_id
-      .. ";"
+  -- 尝试解析为工单复盘结果写入sql
+  local sql = try_parse_ticket_review(lines)
+  if sql then
     table.insert(lines, sql)
     vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
     return
