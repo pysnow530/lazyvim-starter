@@ -174,44 +174,62 @@ local function try_parse_ticket_rules(lines)
   return fetch_ticket_rules(fromdt, todt)
 end
 
--- 尝试文本转换
-vim.keymap.set("v", "<leader>|", function()
-  -- 获取选择范围及文本
-  -- 参考: https://github.com/neovim/neovim/pull/21115
+-- 获取选择范围及文本
+-- 参考: https://github.com/neovim/neovim/pull/21115
+local function get_selected_lines()
   local _, ls, _ = unpack(vim.fn.getpos("v"))
   local _, le, _ = unpack(vim.fn.getpos("."))
   local l1 = math.min(ls, le)
   local l2 = math.max(ls, le)
   local lines = vim.api.nvim_buf_get_lines(0, l1 - 1, l2, true)
+  return lines
+end
+
+local function append_lines(lines)
+  if type(lines) == "string" then
+    lines = lines.split("\n")
+  end
+
+  local _, ls, _ = unpack(vim.fn.getpos("v"))
+  local _, le, _ = unpack(vim.fn.getpos("."))
+  local l1 = math.min(ls, le)
+  local l2 = math.max(ls, le)
+
+  local selected_lines = vim.api.nvim_buf_get_lines(0, l1 - 1, l2, true)
+
+  for _, v in ipairs(lines) do
+    table.insert(selected_lines, v)
+  end
+
+  vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, selected_lines)
+end
+
+-- 尝试文本转换
+vim.keymap.set("v", "<leader>|", function()
+  local lines = get_selected_lines()
 
   -- 尝试解析为数据库连接
   local res = try_parse_mysql(lines)
   if res then
-    table.insert(lines, res)
-    vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+    append_lines(res)
     return
   end
 
   -- 尝试解析为工单复盘结果写入sql
   local sql = try_parse_ticket_review(lines)
   if sql then
-    table.insert(lines, sql)
-    vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+    append_lines(sql)
     return
   end
 
   -- 尝试解析为工具建设规则
   local rules = try_parse_ticket_rules(lines)
   if rules then
-    for _, v in ipairs(rules) do
-      table.insert(lines, v)
-    end
-    vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+    append_lines(rules)
     return
   end
 
-  table.insert(lines, "Not recognized!")
-  vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+  append_lines("Not recognized!")
 end)
 
 function fetch_ticket_rules(fromdate, todate)
