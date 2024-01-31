@@ -229,7 +229,7 @@ function ticketrules(fromdate, todate)
   for _, v in ipairs(rules) do
     local createdate = string.sub(v.created_time, 0, 10)
     local updatedate = string.sub(v.updated_time, 0, 10)
-    if createdate >= fromdate and createdate <= todate then
+    if v.content_parsed.id and createdate >= fromdate and createdate <= todate then
       table.insert(
         ret,
         "| "
@@ -239,7 +239,7 @@ function ticketrules(fromdate, todate)
           )
           .. " |"
       )
-    elseif updatedate >= fromdate and updatedate <= todate then
+    elseif v.content_parsed.id and updatedate >= fromdate and updatedate <= todate then
       table.insert(
         ret,
         "| "
