@@ -67,4 +67,51 @@ function ticket.try_parse_ticket_rules(lines)
   return fetch_ticket_rules(fromdt, todt)
 end
 
+local function parse_ticket_review(lines)
+  local tb = {}
+
+  for _, line in ipairs(lines) do
+    local ticket_id = string.match(line, "%s*https://andon.woa.com/ticket/detail/%?id=(%d+)&sign=.*")
+    if ticket_id then
+      tb.ticket_id = ticket_id
+    elseif string.find(line, "不合理原因") or string.find(line, "待办") then
+      tb.remark = line
+    else
+      tb.tag_topic = line
+    end
+  end
+
+  return tb
+end
+
+-- 尝试解析为工单复盘信息写入sql
+function ticket.try_parse_ticket_review(lines)
+  local ticket_review = parse_ticket_review(lines)
+
+  if not ticket_review.ticket_id then
+    return nil
+  end
+
+  if not ticket_review.tag_topic and not ticket_review.remark then
+    return nil
+  end
+
+  local set_fields = {}
+  if ticket_review.tag_topic then
+    table.insert(set_fields, 'tag_topic = "' .. ticket_review.tag_topic .. '"')
+  end
+  if ticket_review.remark then
+    table.insert(set_fields, 'remark = "' .. ticket_review.remark .. '"')
+    if string.find(ticket_review.remark, "不合理原因") then
+      table.insert(set_fields, "unreasonable = 1")
+    end
+  end
+  local sql = "UPDATE ticket_review SET "
+    .. table.concat(set_fields, ", ")
+    .. " WHERE ticket_id = "
+    .. ticket_review.ticket_id
+    .. ";"
+  return sql
+end
+
 return ticket
