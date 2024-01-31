@@ -159,19 +159,19 @@ end
 
 -- 尝试解析为CVM流程诊断助手规则更新信息
 local function try_parse_ticket_rules(lines)
-  local matchedLines = filter(function(v)
+  local matched_lines = filter(function(v)
     local _1, _2 = string.match(v, "%s*CVM流程诊断助手规则 (%d+/%d+/%d+) ~ (%d+/%d+/%d+)%s*")
     return _1 and _2
   end, lines)
-  if #matchedLines == 0 then
+  if #matched_lines == 0 then
     return nil
   end
 
-  local line = matchedLines[1]
+  local line = matched_lines[1]
   local fromdt, todt = string.match(line, "%s*CVM流程诊断助手规则 (%d+/%d+/%d+) ~ (%d+/%d+/%d+)%s*")
   fromdt = string.gsub(fromdt, "/", "-")
   todt = string.gsub(todt, "/", "-")
-  return ticketrules(fromdt, todt)
+  return fetch_ticket_rules(fromdt, todt)
 end
 
 -- 尝试文本转换
@@ -214,7 +214,7 @@ vim.keymap.set("v", "<leader>|", function()
   vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
 end)
 
-function ticketrules(fromdate, todate)
+function fetch_ticket_rules(fromdate, todate)
   local curl = require("plenary/curl")
   local res = curl.get(
     "http://vsops.woa.com/api/ticket/rules/",
