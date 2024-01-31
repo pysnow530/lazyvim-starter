@@ -157,6 +157,46 @@ local function filter(fun, tbl)
   return res
 end
 
+local function fetch_ticket_rules(fromdate, todate)
+  local curl = require("plenary/curl")
+  local res = curl.get(
+    "http://vsops.woa.com/api/ticket/rules/",
+    { headers = { ["SECURITY-CODE"] = "32be9b5d5dfb313f843293e0cf5afd44" } }
+  )
+  -- 数据结构参考：https://vsops.woa.com/api/ticket/rules/
+  local rules = vim.json.decode(res.body)["data"]
+  local ret = {}
+  table.insert(ret, "")
+  table.insert(ret, "| 动作 | 规则编号 | 规则描述 | 规则维护人 |")
+  table.insert(ret, "| ---- | -------- | -------- | ---------- |")
+  for _, v in ipairs(rules) do
+    local createdate = string.sub(v.created_time, 0, 10)
+    local updatedate = string.sub(v.updated_time, 0, 10)
+    if v.content_parsed.id and createdate >= fromdate and createdate <= todate then
+      table.insert(
+        ret,
+        "| "
+          .. table.concat(
+            { "规则新建", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
+            " | "
+          )
+          .. " |"
+      )
+    elseif v.content_parsed.id and updatedate >= fromdate and updatedate <= todate then
+      table.insert(
+        ret,
+        "| "
+          .. table.concat(
+            { "规则优化", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
+            " | "
+          )
+          .. " |"
+      )
+    end
+  end
+  return ret
+end
+
 -- 尝试解析为CVM流程诊断助手规则更新信息
 local function try_parse_ticket_rules(lines)
   local matched_lines = filter(function(v)
@@ -231,43 +271,3 @@ vim.keymap.set("v", "<leader>|", function()
 
   append_lines("Not recognized!")
 end)
-
-function fetch_ticket_rules(fromdate, todate)
-  local curl = require("plenary/curl")
-  local res = curl.get(
-    "http://vsops.woa.com/api/ticket/rules/",
-    { headers = { ["SECURITY-CODE"] = "32be9b5d5dfb313f843293e0cf5afd44" } }
-  )
-  -- 数据结构参考：https://vsops.woa.com/api/ticket/rules/
-  local rules = vim.json.decode(res.body).data
-  local ret = {}
-  table.insert(ret, "")
-  table.insert(ret, "| 动作 | 规则编号 | 规则描述 | 规则维护人 |")
-  table.insert(ret, "| ---- | -------- | -------- | ---------- |")
-  for _, v in ipairs(rules) do
-    local createdate = string.sub(v.created_time, 0, 10)
-    local updatedate = string.sub(v.updated_time, 0, 10)
-    if v.content_parsed.id and createdate >= fromdate and createdate <= todate then
-      table.insert(
-        ret,
-        "| "
-          .. table.concat(
-            { "规则新建", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
-            " | "
-          )
-          .. " |"
-      )
-    elseif v.content_parsed.id and updatedate >= fromdate and updatedate <= todate then
-      table.insert(
-        ret,
-        "| "
-          .. table.concat(
-            { "规则优化", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
-            " | "
-          )
-          .. " |"
-      )
-    end
-  end
-  return ret
-end
