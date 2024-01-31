@@ -20,7 +20,13 @@ vim.keymap.set("n", "<leader>v", function()
 end)
 
 -- python
-vim.keymap.set("n", "<localleader>r", ":!python3 %<cr>")
+vim.keymap.set("n", "<localleader>r", function()
+  if vim.bo.filetype == "python" then
+    vim.api.nvim_command("!python3 %")
+  elseif vim.bo.filetype == "lua" then
+    vim.api.nvim_command("luafile %")
+  end
+end)
 vim.keymap.set("v", "<localleader>r", ":!python3<cr>")
 
 -- 解析配置格式的字典（支持toml、json、python字典）
@@ -141,6 +147,33 @@ local function try_parse_ticket_review(lines)
   return sql
 end
 
+local function filter(fun, tbl)
+  local res = {}
+  for _, v in ipairs(tbl) do
+    if fun(v) then
+      table.insert(res, v)
+    end
+  end
+  return res
+end
+
+-- 尝试解析为CVM流程诊断助手规则更新信息
+local function try_parse_ticket_rules(lines)
+  local matchedLines = filter(function(v)
+    local _1, _2 = string.match(v, "%s*CVM流程诊断助手规则 (%d+/%d+/%d+) ~ (%d+/%d+/%d+)%s*")
+    return _1 and _2
+  end, lines)
+  if #matchedLines == 0 then
+    return nil
+  end
+
+  local line = matchedLines[1]
+  local fromdt, todt = string.match(line, "%s*CVM流程诊断助手规则 (%d+/%d+/%d+) ~ (%d+/%d+/%d+)%s*")
+  fromdt = string.gsub(fromdt, "/", "-")
+  todt = string.gsub(todt, "/", "-")
+  return ticketrules(fromdt, todt)
+end
+
 -- 尝试文本转换
 vim.keymap.set("v", "<leader>|", function()
   -- 获取选择范围及文本
@@ -167,6 +200,16 @@ vim.keymap.set("v", "<leader>|", function()
     return
   end
 
+  -- 尝试解析为工具建设规则
+  local rules = try_parse_ticket_rules(lines)
+  if rules then
+    for _, v in ipairs(rules) do
+      table.insert(lines, v)
+    end
+    vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+    return
+  end
+
   table.insert(lines, "Not recognized!")
   vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
 end)
@@ -179,17 +222,34 @@ function ticketrules(fromdate, todate)
   )
   -- 数据结构参考：https://vsops.woa.com/api/ticket/rules/
   local rules = vim.json.decode(res.body).data
+  local ret = {}
+  table.insert(ret, "")
+  table.insert(ret, "| 动作 | 规则编号 | 规则描述 | 规则维护人 |")
+  table.insert(ret, "| ---- | -------- | -------- | ---------- |")
   for _, v in ipairs(rules) do
     local createdate = string.sub(v.created_time, 0, 10)
     local updatedate = string.sub(v.updated_time, 0, 10)
     if createdate >= fromdate and createdate <= todate then
-      print(
-        table.concat({ "规则新建", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner }, " | ")
+      table.insert(
+        ret,
+        "| "
+          .. table.concat(
+            { "规则新建", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
+            " | "
+          )
+          .. " |"
       )
     elseif updatedate >= fromdate and updatedate <= todate then
-      print(
-        table.concat({ "规则优化", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner }, " | ")
+      table.insert(
+        ret,
+        "| "
+          .. table.concat(
+            { "规则优化", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
+            " | "
+          )
+          .. " |"
       )
     end
   end
+  return ret
 end
