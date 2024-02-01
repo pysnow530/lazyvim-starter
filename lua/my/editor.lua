@@ -30,4 +30,13 @@ function editor.append_lines(lines)
   vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, selected_lines)
 end
 
+function editor.replace_selected_lines(lines)
+  local _, ls, _ = unpack(vim.fn.getpos("v"))
+  local _, le, _ = unpack(vim.fn.getpos("."))
+  local l1 = math.min(ls, le)
+  local l2 = math.max(ls, le)
+
+  vim.api.nvim_buf_set_lines(0, l1 - 1, l2, true, lines)
+end
+
 return editor

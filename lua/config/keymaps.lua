@@ -5,6 +5,7 @@ local Util = require("lazyvim.util")
 local ticket = require("my.ticket")
 local sre = require("my.sre")
 local editor = require("my.editor")
+local shell = require("my.shell")
 
 vim.keymap.set("i", "jk", "<esc>")
 
@@ -53,6 +54,13 @@ vim.keymap.set("v", "<leader>|", function()
   local rules = ticket.try_parse_ticket_rules(lines)
   if rules then
     editor.append_lines(rules)
+    return
+  end
+
+  -- 尝试解析为shell命令并执行
+  local output = shell.try_run_shell(lines)
+  if output then
+    editor.replace_selected_lines(output)
     return
   end
 
