@@ -73,7 +73,7 @@ local function parse_ticket_review(lines)
   local tb = {}
 
   for _, line in ipairs(lines) do
-    local ticket_id = string.match(line, "%s*https://andon.woa.com/ticket/detail/%?id=(%d+)&sign=.*")
+    local ticket_id = string.match(line, "%?id=(%d+)&sign=.*")
     if ticket_id then
       tb.ticket_id = ticket_id
     elseif string.find(line, "不合理原因") or string.find(line, "待办") then
@@ -94,7 +94,7 @@ function ticket.try_parse_ticket_review(lines)
     return nil
   end
 
-  if not ticket_review.tag_topic and not ticket_review.remark then
+  if (not ticket_review.tag_topic) and not ticket_review.remark then
     return nil
   end
 
