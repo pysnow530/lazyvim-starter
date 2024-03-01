@@ -15,25 +15,29 @@ local function fetch_ticket_rules(fromdate, todate)
   for _, v in ipairs(rules) do
     local createdate = string.sub(v.created_time, 0, 10)
     local updatedate = string.sub(v.updated_time, 0, 10)
-    if v.content_parsed.id and createdate >= fromdate and createdate <= todate then
+    local owner = v.content_parsed.owner
+    local is_cvm = false
+    if
+      owner == "jelifzhang"
+      or owner == "belleshen"
+      or owner == "sherrzhang"
+      or owner == "billychan"
+      or owner == "oogwu"
+      or owner == "wadezheou"
+      or owner == "andylliu"
+      or owner == "kbryanzhang"
+    then
+      is_cvm = true
+    end
+    if is_cvm and v.content_parsed.id and createdate >= fromdate and createdate <= todate then
       table.insert(
         ret,
-        "| "
-          .. table.concat(
-            { "规则新建", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
-            " | "
-          )
-          .. " |"
+        "| " .. table.concat({ "规则新建", v.content_parsed.id, v.content_parsed.title, owner }, " | ") .. " |"
       )
-    elseif v.content_parsed.id and updatedate >= fromdate and updatedate <= todate then
+    elseif is_cvm and v.content_parsed.id and updatedate >= fromdate and updatedate <= todate then
       table.insert(
         ret,
-        "| "
-          .. table.concat(
-            { "规则优化", v.content_parsed.id, v.content_parsed.title, v.content_parsed.owner },
-            " | "
-          )
-          .. " |"
+        "| " .. table.concat({ "规则优化", v.content_parsed.id, v.content_parsed.title, owner }, " | ") .. " |"
       )
     end
   end
@@ -53,7 +57,7 @@ end
 -- 尝试解析为CVM流程诊断助手规则更新信息
 function ticket.try_parse_ticket_rules(lines)
   local matched_lines = filter(function(v)
-    local _1, _2 = string.match(v, "%s*CVM流程诊断助手规则 (%d+/%d+/%d+) ~ (%d+/%d+/%d+)%s*")
+    local _1, _2 = string.match(v, "%s*CVM流程诊断助手规则 (%d+-%d+-%d+) ~ (%d+-%d+-%d+)%s*")
     return _1 and _2
   end, lines)
   if #matched_lines == 0 then
@@ -61,9 +65,7 @@ function ticket.try_parse_ticket_rules(lines)
   end
 
   local line = matched_lines[1]
-  local fromdt, todt = string.match(line, "%s*CVM流程诊断助手规则 (%d+/%d+/%d+) ~ (%d+/%d+/%d+)%s*")
-  fromdt = string.gsub(fromdt, "/", "-")
-  todt = string.gsub(todt, "/", "-")
+  local fromdt, todt = string.match(line, "%s*CVM流程诊断助手规则 (%d+-%d+-%d+) ~ (%d+-%d+-%d+)%s*")
   return fetch_ticket_rules(fromdt, todt)
 end
 
